@@ -12,22 +12,24 @@
 %       direction = 0
 
 %%
-function [direction] = illuminant_direction(image, region_size)
+%function [direction] = illuminant_direction(image, region_size)
 
+region_size = 100;
+image = toutatis;
 %   错误的输入
-if region_size < 3 || region_size > size(image, 1) || region_size > size(image, 2) || size(image, 1) < 3 || size(image, 2) < 3
+if region_size < 3 || region_size > size(image, 1) || region_size > size(image, 2) || size(image, 1) < 3 || size(image, 2) < 3 || size(image, 1) ~= size(image, 2)
     direction = 0;
     return;
 end
 
-if length(image) > 2
+if length(size(image)) > 2
     image = rgb2gray(image);
 end
 
 %   生成八方向prewitt算子，也就是8个三行三列的矩阵
 temp = fspecial('prewitt');
-prewitt = zeros(3, 3, 8);
-for i = 1: 8
+prewitt = zeros(3, 3, 4);
+for i = 1: 4
     prewitt(:, :, i) = temp;
     temp = imrotate(temp, 45, 'crop');
 end
@@ -40,26 +42,30 @@ laplacian = fspecial('laplacian');
 direction = zeros(int32((size(image, 1) - 2) / region_size), int32((size(image, 2) - 2) / region_size), 3);
 
 %   beta代表图像上的八个方向，每个方向化为单位向量
-beta = [0, -1; -1, -1; -1, 0; 1, -1; 1, 0; 1, 1; 0, 1; -1, 1];
-for i = 1: 8
+beta = [-1, 0; -1, -1; 0, -1; 1, -1];%; 1, 0; 1, 1; 0, 1; -1, 1];
+for i = 1: 4
     beta(i, :) = beta(i, :)/norm(beta(i, :));
 end
 beta = inv(beta' * beta) * beta';
 %[x~, y~] = inv(beta' * beta) * beta' *
 
 %   这个循环计算了每个区域的dI和dI2,计算每个区域的光照方向并存入direction
-for i = 2 : region_size : size(image, 1) - 1
-    for j = 2  : region_size : size(image, 2) - 1
+for i = 2 : region_size : size(image, 1) - region_size
+    for j = 2  : region_size : size(image, 2) - region_size
         %   此循环内为对应一个区域
         %   gradient对应dI，gradient2对应dI2
-        gradient = double(zeros(1, 8));
+        gradient = double(zeros(1, 4));
         gradient2 = 0;
         for k = i : i + region_size
             for l = j : j + region_size
-                region = double([image(i - 1, j - 1), image(i - 1, j), image(i - 1, j + 1); image(i, j), image(i, j - 1), image(i, j + 1); image(i - 1, j - 1), image(i + 1, j), image(i + 1, j + 1)]);
-                for m = 1: 8
+                region = double([image(k - 1, l - 1), image(k - 1, l), image(k - 1, l + 1); image(k, l), image(k, l - 1), image(k, l + 1); image(k - 1, l - 1), image(k + 1, l), image(k + 1, l + 1)]);
+                for m = 1: 4
                     gradient(1, m) = gradient(1, m) + sum(sum(region .* prewitt(:, :, m)));
                 end
+%                 if sum(sum(region .* prewitt(:, :, m))) ~=0
+%                     not0 = region .* prewitt(:, :, m);
+%                     return;
+%                 end
                 
                 gradient2 = gradient2 + sum(sum(region .* laplacian));
             end
@@ -71,8 +77,12 @@ for i = 2 : region_size : size(image, 1) - 1
         
         x_y_ = beta * gradient';
         %   k可能为复数
-        k = sqrt(gradient2 - mean(gradient)^2);
-        
+%         if gradient2 - mean(gradient)^2 > 0
+            k = sqrt(gradient2 - mean(gradient)^2);
+%         else
+%             continue;
+%         end
+       
         direction(int32(i / region_size) + 1, int32(j / region_size) + 1, 1) = x_y_(1, 1) / k;
         direction(int32(i / region_size) + 1, int32(j / region_size) + 1, 2) = x_y_(2, 1) / k;
         direction(int32(i / region_size) + 1, int32(j / region_size) + 1, 3) = sqrt(1 - (x_y_(1, 1) / k)^2 - (x_y_(2, 1) / k)^2);
