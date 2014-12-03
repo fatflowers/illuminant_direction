@@ -28,8 +28,8 @@ end
 
 %   生成八方向prewitt算子，也就是8个三行三列的矩阵
 temp = fspecial('prewitt');
-prewitt = zeros(3, 3, 4);
-for i = 1: 4
+prewitt = zeros(3, 3, 8);
+for i = 1: 8
     prewitt(:, :, i) = temp;
     temp = imrotate(temp, 45, 'crop');
 end
@@ -42,8 +42,8 @@ laplacian = fspecial('laplacian');
 direction = zeros(int32((size(image, 1) - 2) / region_size), int32((size(image, 2) - 2) / region_size), 3);
 
 %   beta代表图像上的八个方向，每个方向化为单位向量
-beta = [-1, 0; -1, -1; 0, -1; 1, -1];%; 1, 0; 1, 1; 0, 1; -1, 1];
-for i = 1: 4
+beta = [-1, 0; -1, -1; 0, -1; 1, -1; 1, 0; 1, 1; 0, 1; -1, 1];
+for i = 1: 8
     beta(i, :) = beta(i, :)/norm(beta(i, :));
 end
 beta = inv(beta' * beta) * beta';
