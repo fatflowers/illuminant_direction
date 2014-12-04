@@ -14,15 +14,15 @@
 %%
 %function [direction] = illuminant_direction(image, region_size)
 
-t_image = rgb2gray(t2);
+image = rgb2gray(t2);
 imshow(t_image);
 %[y, x, width, height];
 rect = getrect;
 
-y = rect(1, 1);
-x = rect(1, 2);
-width = rect(1, 3);
-height = rect(1, 4);
+y = int32(rect(1, 1));
+x = int32(rect(1, 2));
+width = int32(rect(1, 3));
+height = int32(rect(1, 4));
 
 
 % image = toutatis;
@@ -32,9 +32,9 @@ height = rect(1, 4);
 %     return;
 % end
 
-if length(size(image)) > 2
-    image = rgb2gray(image);
-end
+% if length(size(image)) > 2
+%     image = rgb2gray(image);
+% end
 
 %   生成八方向prewitt算子，也就是8个三行三列的矩阵
 temp = fspecial('prewitt');
@@ -49,7 +49,7 @@ laplacian = fspecial('laplacian');
 
 
 %   存储返回值，每个区域对应一个光源向量
-direction = zeros(int32((size(image, 1) - 2) / region_size), int32((size(image, 2) - 2) / region_size), 3);
+% direction = zeros(int32((size(image, 1) - 2) / region_size), int32((size(image, 2) - 2) / region_size), 3);
 
 %   beta代表图像上的八个方向，每个方向化为单位向量
 beta = [-1, 0; -1, -1; 0, -1; 1, -1; 1, 0; 1, 1; 0, 1; -1, 1];
@@ -59,15 +59,27 @@ end
 beta = inv(beta' * beta) * beta';
 
 gradient1 = zeros(height, width, 8);
+gradient2 = zeros(height, width, 8);
 
 for i = 1: 8
     for j = 2: height - 1
         for k = 2: width - 1
-            region = double([image(j - 1, k - 1), image(j - 1, k), image(j - 1, k + 1); image(j, k), image(j, k - 1), image(j, k + 1); image(j - 1, k - 1), image(j + 1, k), image(j + 1, k + 1)]);
+%             region = double([image(j + height -  1, k - 1), image(j + height - 1, k), image(j + height - 1, k + 1); image(j + height, k), image(j + height, k - 1), image(j + height, k + 1); image(j + height - 1, k - 1), image(j + height + 1, k), image(j + height + 1, k + 1)]);
+            region = double(image(j + x -  1: j + x + 1, k + y - 1: k + y + 1));
             gradient1(j, k, i) = sum(sum(prewitt(:, :, i) .* region));
         end
     end
 end
 
+EdI = double(sum(sum(sum(gradient1)))) / double((height - 2)) / double((width - 2)) / 8.0;
+
+% for i = 1: 8
+%     gradient1(:, :, i) = gradient1(:, :, i) .* gradient1(:, :, i);
+% end
+% 
+% EdI2 = double(sum(sum(sum(gradient1)))) / double((height - 2)) / double((width - 2)) / 8.0;
+% 
+% 
+% k = sqrt(EdI2 - EdI^2);
 
 
